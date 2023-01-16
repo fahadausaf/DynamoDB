@@ -1,11 +1,12 @@
 import boto3
 from botocore.exceptions import ClientError
+from boto3.dynamodb.conditions import Key
 from pprint import pprint
 import json
 from decimal import Decimal
 
-ACCESS_KEY = 'AKIAZSXXXNVF3DLQXI6S'
-SECRET_KEY = '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'
+ACCESS_KEY = ''
+SECRET_KEY = ''
 
 session = boto3.Session(aws_access_key_id=ACCESS_KEY,
                         aws_secret_access_key=SECRET_KEY)
@@ -84,9 +85,91 @@ def readItem():
         response = table.get_item(Key={'Author':author, 'Title':title})
     except ClientError as e:
         print(e.response['Error']['Message'])
+    except Exception as e: 
+        print(e)
     else:
         print(response['Item'])
 
 def updateItem():
     table = dynamodb.Table('books')
-    response = table.update_item()
+    author = 'Murtaza'
+    title = 'The Big New Book'
+    category = 'Suspense'
+
+    response = table.update_item(
+        Key = {
+            'Author': author,
+            'Title': title
+        },
+        UpdateExpression = 'SET Category=:c',
+        ExpressionAttributeValues = {
+            ':c':category
+        },
+        ReturnValues = 'UPDATED_NEW'
+    )
+
+    print(response)
+
+def deleteItem1():
+    table = dynamodb.Table('books')
+    author = 'Murtaza'
+    title = 'The Big New Book'
+    category = 'Suspense'
+
+    response = table.delete_item(
+        Key = {
+            'Author': author,
+            'Title': title
+        },
+        ConditionExpression='Category=:val',
+        ExpressionAttributeValues={
+            ':val': category
+        })
+    print(response)
+
+def deleteItem2():
+    table = dynamodb.Table('books')
+    author = 'Murtaza'
+    title = 'The Big New Book'
+    category = 'Suspense'
+
+    response = table.delete_item(
+        Key = {
+            'Author': author,
+            'Title': title
+        })
+    print(response)
+
+def query():
+    table = dynamodb.Table('books')
+    response = table.query(
+        ProjectionExpression = 'Title,Category,#ft',
+        ExpressionAttributeNames = {'#ft':'format'},
+        KeyConditionExpression = 
+        Key('Author').eq('John Grisham')
+    )
+
+    print(response)
+
+def scan():
+    table = dynamodb.Table('books')
+
+    scan_kwargs = {
+        'FilterExpression': Key('Category').eq('Suspense'),
+        'ProjectionExpression': 'Title, Category, #ft',
+        'ExpressionAttributeNames': {'#ft':'format'}
+    }
+
+    done = False
+    start_key = None
+
+    while not done:
+        if start_key:
+            scan_kwargs['ExclusiveStartKey'] = start_key
+        response = table.scan(**scan_kwargs)
+        print(response)
+        start_key = response.get('LastEvaluatedKey', None)
+        done = start_key is None
+
+    print(response)
+

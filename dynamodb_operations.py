@@ -73,5 +73,3 @@ def readTable():
     )
     item = response['Item']
     print(item)
-
-readTable()
